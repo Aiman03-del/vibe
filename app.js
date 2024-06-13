@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const path = require("path");
 const cors = require("cors");
 const favicon = require("serve-favicon");
+require("dotenv").config();
 
 const Song = require("./models/songs");
 
@@ -15,20 +16,18 @@ app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Static folder to serve files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-//connecting to DB
 const connectDB = async () => {
   try {
-    await mongoose.connect("mongodb://localhost:27017/myapp", {
+    await mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    console.log("db is connected");
+    console.log(`db is connected ${mongoose.connection.host}`);
   } catch (error) {
     console.log("db is not connected");
     console.log(error);
@@ -37,7 +36,6 @@ const connectDB = async () => {
 };
 connectDB();
 
-// Multer storage configuration
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     if (file.fieldname === "image") {
@@ -54,7 +52,6 @@ const storage = multer.diskStorage({
   },
 });
 
-// Multer upload configuration
 const upload = multer({ storage: storage });
 
 app.get("/register", (req, res) => {
@@ -69,7 +66,6 @@ app.post(
   ]),
   async (req, res) => {
     try {
-      // Debug logging
       console.log("Request files: ", req.files);
       console.log("Request body: ", req.body);
 
@@ -142,7 +138,6 @@ app.delete("/delete-song/:id", async (req, res) => {
   }
 });
 
-// Add a new POST route for editing songs
 app.post("/edit-song", upload.none(), async (req, res) => {
   try {
     const { editSongId, editDesc, editDuration } = req.body;

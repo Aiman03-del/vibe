@@ -21,17 +21,16 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-//connecting to DB
+// Connecting to DB
 const connectDB = async () => {
   try {
     await mongoose.connect("mongodb://localhost:27017/myapp", {
-      useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-    console.log("db is connected");
+    console.log("DB is connected");
   } catch (error) {
-    console.log("db is not connected");
-    console.log(error);
+    console.log("DB is not connected");
+    console.error(error);
     process.exit(1);
   }
 };
@@ -58,7 +57,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.get("/register", (req, res) => {
-  res.status(200).sendFile(__dirname + "/index.html");
+  res.status(200).sendFile(path.join(__dirname, "index.html"));
 });
 
 app.post(
@@ -70,14 +69,12 @@ app.post(
   async (req, res) => {
     try {
       const { name, desc, duration } = req.body;
-      const imageUrl = `http://localhost:${PORT}/${req.files.image[0].path.replace(
-        /\\/g,
-        "/"
-      )}`;
-      const fileUrl = `http://localhost:${PORT}/${req.files.file[0].path.replace(
-        /\\/g,
-        "/"
-      )}`;
+      const imageUrl = `${req.protocol}://${req.get(
+        "host"
+      )}/${req.files.image[0].path.replace(/\\/g, "/")}`;
+      const fileUrl = `${req.protocol}://${req.get(
+        "host"
+      )}/${req.files.file[0].path.replace(/\\/g, "/")}`;
 
       const newSong = new Song({
         name: name,
@@ -93,8 +90,8 @@ app.post(
         .status(200)
         .json({ message: "Song submitted successfully", song: savedSong });
     } catch (error) {
-      console.log(error);
-      res.status(500).json({ error: "Songs lists are not found" });
+      console.error(error);
+      res.status(500).json({ error: "Song submission failed" });
     }
   }
 );
@@ -104,7 +101,7 @@ app.get("/songs", async (req, res) => {
     const songs = await Song.find();
     res.status(200).json(songs);
   } catch (error) {
-    res.status(500).json({ error: "Songs lists are not added" });
+    res.status(500).json({ error: "Failed to fetch songs" });
   }
 });
 
@@ -116,7 +113,7 @@ app.get("/songs/:id", async (req, res) => {
     }
     res.status(200).json(song);
   } catch (error) {
-    res.status(500).json({ error: "Songs data not loaded" });
+    res.status(500).json({ error: "Failed to load song data" });
   }
 });
 
@@ -124,11 +121,11 @@ app.delete("/delete-song/:id", async (req, res) => {
   try {
     const deletedSong = await Song.findByIdAndDelete(req.params.id);
     if (!deletedSong) {
-      return res.status(404).json({ error: "song not removed" });
+      return res.status(404).json({ error: "Song not removed" });
     }
-    res.status(200).json({ message: "song removed successfully" });
+    res.status(200).json({ message: "Song removed successfully" });
   } catch (error) {
-    res.status(500).json({ error: "song not removed" });
+    res.status(500).json({ error: "Failed to remove song" });
   }
 });
 
@@ -142,11 +139,12 @@ app.post("/edit-song", upload.none(), async (req, res) => {
       { new: true }
     );
     if (!updatedSong) {
-      return res.status(404).json({ error: "song not found" });
+      return res.status(404).json({ error: "Song not found" });
     }
     res.status(200).json(updatedSong);
   } catch (error) {
-    res.status(500).json({ error: "unable to update song" });
+    res.status(500).json({ error: "Failed to update song" });
   }
 });
+
 module.exports = app;

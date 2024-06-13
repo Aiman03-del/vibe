@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vibe API</title>
+  </head>
+  <body>
+    <h1>Add Song</h1>
+    <form
+      id="songForm"
+      action="/submit-song"
+      method="POST"
+      enctype="multipart/form-data"
+    >
+      <label for="name">Name:</label>
+      <input type="text" id="name" name="name" /><br /><br />
+      <label for="image">Image:</label>
+      <input type="file" id="image" name="image" accept="image/*" /><br /><br />
+      <label for="file">File:</label>
+      <input type="file" id="file" name="file" accept="audio/*" /><br /><br />
+      <label for="desc">Desc:</label>
+      <input type="text" id="desc" name="desc" /><br /><br />
+      <label for="duration">Duration:</label>
+      <input type="text" id="duration" name="duration" /><br /><br />
+      <button type="submit">Submit</button>
+    </form>
+    <div>
+      <h2>Song List</h2>
+      <div id="songList" style="display: flex; flex-wrap: wrap"></div>
+    </div>
+
+    <!-- Edit Song Form -->
+    <div id="editFormContainer" style="display: none">
+      <h2>Edit Song</h2>
+      <form id="editSongForm">
+        <input type="hidden" id="editSongId" name="editSongId" />
+        <label for="editDesc">Description:</label>
+        <input type="text" id="editDesc" name="editDesc" /><br /><br />
+        <label for="editDuration">Duration:</label>
+        <input type="text" id="editDuration" name="editDuration" /><br /><br />
+        <button type="submit">Update</button>
+      </form>
+    </div>
+
+    <script>
+      document.getElementById("songForm").onsubmit = async function (event) {
+        event.preventDefault();
+        const formData = new FormData(this);
+
+        const response = await fetch("/submit-song", {
+          method: "POST",
+          body: formData,
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          // Reset the form
+          this.reset();
+          // Refresh the song list
+          loadSongs();
+        } else {
+          alert(result.error);
+        }
+      };
+
+      async function loadSongs() {
+        const response = await fetch("/songs");
+        const songs = await response.json();
+
+        const songListDiv = document.getElementById("songList");
+        songListDiv.innerHTML = "";
+        songs.forEach((song) => {
+          const songDiv = document.createElement("div");
+          songDiv.innerHTML = `
+                      <div style="margin: 10px; padding: 10px; border: 1px solid #ccc;">
+                          <h3>${song.name}</h3>
+                          <img src="${song.image}" alt="${song.name}" style="max-width: 200px; max-height:200px" /><br/>
+                          <audio controls>
+                              <source src="${song.file}" type="audio/mpeg">
+                              Your browser does not support the audio element.
+                          </audio><br/>
+                          <p>${song.desc}</p>
+                          <p>Duration: ${song.duration}</p>
+                          <button onclick="deleteSong('${song._id}')">Delete</button>
+                          <button onclick="displayEditForm('${song._id}', '${song.desc}', '${song.duration}')">Edit</button>
+                      </div>
+                  `;
+          songListDiv.appendChild(songDiv);
+        });
+      }
+
+      async function deleteSong(songId) {
+        const response = await fetch(`/delete-song/${songId}`, {
+          method: "DELETE",
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          alert("Song deleted successfully");
+          loadSongs(); // Reload the song list after deletion
+        } else {
+          alert(result.error);
+        }
+      }
+
+      // Add this function to display the edit form
+      function displayEditForm(id, desc, duration) {
+        document.getElementById("editFormContainer").style.display = "block";
+        document.getElementById("editSongId").value = id;
+        document.getElementById("editDesc").value = desc;
+        document.getElementById("editDuration").value = duration;
+      }
+
+      // Modify the editSongForm submission handler
+      document.getElementById("editSongForm").onsubmit = async function (
+        event
+      ) {
+        event.preventDefault();
+        const formData = new FormData(this);
+
+        const response = await fetch("/edit-song", {
+          method: "POST",
+          body: formData,
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          // Hide the edit form after submission
+          document.getElementById("editFormContainer").style.display = "none";
+          // Refresh the song list
+          loadSongs();
+        } else {
+          alert(result.error);
+        }
+      };
+      // Load songs when the page is loaded
+      window.onload = loadSongs;
+    </script>
+  </body>
+</html>
